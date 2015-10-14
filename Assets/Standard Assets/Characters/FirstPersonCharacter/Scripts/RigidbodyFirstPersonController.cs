@@ -183,7 +183,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
             bytesRight = null;
 
             SendStatus ss = socket.Send(bytes, SendRecvOpt.NOBLOCK);
-            Debug.Log("Hello");
         }
 
         public Texture2D WritePixels(RenderTexture rt, Texture2D texture2D)
