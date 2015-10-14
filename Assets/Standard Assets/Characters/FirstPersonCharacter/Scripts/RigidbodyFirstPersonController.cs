@@ -142,13 +142,12 @@ namespace UnityStandardAssets.Characters.FirstPerson
             m_Capsule = GetComponent<CapsuleCollider>();
 
             renderTextureLeft = new RenderTexture(kortexSettings.CameraWidth, kortexSettings.CameraHeight, 24);
-            renderTextureRight = new RenderTexture(kortexSettings.CameraWidth, kortexSettings.CameraHeight, 24);
-
             kortexSettings.CameraLeft.targetTexture = renderTextureLeft;
-            kortexSettings.CameraRight.targetTexture = renderTextureRight;
+            textureLeft = new Texture2D(renderTextureLeft.width, renderTextureLeft.height, TextureFormat.RGB24, false);
 
-            textureLeft = new Texture2D(renderTextureLeft.width, renderTextureLeft.height);
-            textureRight = new Texture2D(renderTextureLeft.width, renderTextureLeft.height);
+            renderTextureRight = new RenderTexture(kortexSettings.CameraWidth, kortexSettings.CameraHeight, 24);
+            kortexSettings.CameraRight.targetTexture = renderTextureRight;
+            textureRight = new Texture2D(renderTextureRight.width, renderTextureRight.height, TextureFormat.RGB24, false);
 
             mouseLook.Init(transform, kortexSettings.CameraLeft.transform);
             mouseLook.Init(transform, kortexSettings.CameraRight.transform);
@@ -164,16 +163,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
             yield return new WaitForEndOfFrame();
             WritePixels(renderTextureLeft, textureLeft);
             WritePixels(renderTextureRight, textureRight);
-
-            //Color[] colorsL = textureLeft.GetPixels();
-            //Color[] colorsR = textureRight.GetPixels();
-
-            //byte[] bytesl = textureLeft.EncodeToPNG();
-            //byte[] bytesr = textureRight.EncodeToPNG();
-            //byte[] bytes = new byte[bytesL.Length + bytesR.Length];
-            //System.Buffer.BlockCopy(bytesL, 0, bytes, 0, bytesL.Length);
-            //System.Buffer.BlockCopy(bytesR, 0, bytes, bytesL.Length, bytesR.Length);
-
             byte[] bytesLeft = textureLeft.GetRawTextureData();
             byte[] bytesRight = textureRight.GetRawTextureData();
             byte[] bytes = new byte[bytesLeft.Length + bytesRight.Length];
@@ -181,7 +170,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
             System.Buffer.BlockCopy(bytesRight, 0, bytes, bytesLeft.Length, bytesRight.Length);
             bytesLeft = null;
             bytesRight = null;
-
             SendStatus ss = socket.Send(bytes, SendRecvOpt.NOBLOCK);
         }
 
