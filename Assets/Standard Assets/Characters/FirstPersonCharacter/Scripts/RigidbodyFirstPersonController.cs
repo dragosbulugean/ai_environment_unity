@@ -73,17 +73,33 @@ namespace UnityStandardAssets.Characters.FirstPerson
             public bool airControl; // can the user control the direction that is being moved in the air
         }
 
+        [Serializable]
+        public class KortexSettings
+        {
 
-        public Camera camL;
-        public Camera camR;
-        public Camera camT;
-        public RenderTexture renderTextureLeft;
-        public RenderTexture renderTextureRight;
-        Texture2D textureLeft;
-        Texture2D textureRight;
-        Context context;
-        Socket socket;
+            public bool CanMove;
 
+            public Camera CameraLeft;
+            public Camera CameraRight;
+            public Camera CameraTop;
+
+            public int CameraWidth;
+            public int CameraHeight;
+
+            public String ProcessorAddress;
+        }
+
+        public KortexSettings kortexSettings = new KortexSettings();
+     
+        private RenderTexture renderTextureLeft;
+        private RenderTexture renderTextureRight;
+        private Texture2D textureLeft;
+        private Texture2D textureRight;
+        private Context context;
+        private Socket socket;
+
+
+        
 
         public MovementSettings movementSettings = new MovementSettings();
         public MouseLook mouseLook = new MouseLook();
@@ -125,21 +141,21 @@ namespace UnityStandardAssets.Characters.FirstPerson
             m_RigidBody = GetComponent<Rigidbody>();
             m_Capsule = GetComponent<CapsuleCollider>();
 
-            renderTextureLeft = new RenderTexture(camL.pixelWidth, camL.pixelHeight, 24);
-            renderTextureRight = new RenderTexture(camR.pixelWidth, camR.pixelHeight, 24);
+            renderTextureLeft = new RenderTexture(kortexSettings.CameraWidth, kortexSettings.CameraHeight, 24);
+            renderTextureRight = new RenderTexture(kortexSettings.CameraWidth, kortexSettings.CameraHeight, 24);
 
-            camL.targetTexture = renderTextureLeft;
-            camR.targetTexture = renderTextureRight;
+            kortexSettings.CameraLeft.targetTexture = renderTextureLeft;
+            kortexSettings.CameraRight.targetTexture = renderTextureRight;
 
             textureLeft = new Texture2D(renderTextureLeft.width, renderTextureLeft.height);
             textureRight = new Texture2D(renderTextureLeft.width, renderTextureLeft.height);
 
-            mouseLook.Init(transform, camL.transform);
-            mouseLook.Init(transform, camR.transform);
+            mouseLook.Init(transform, kortexSettings.CameraLeft.transform);
+            mouseLook.Init(transform, kortexSettings.CameraRight.transform);
 
             context = new Context(1);
             socket = context.Socket(SocketType.PUSH);
-            socket.Bind("tcp://127.0.0.1:4440");
+            socket.Bind(kortexSettings.ProcessorAddress);
         }
 
 
@@ -148,17 +164,26 @@ namespace UnityStandardAssets.Characters.FirstPerson
             yield return new WaitForEndOfFrame();
             WritePixels(renderTextureLeft, textureLeft);
             WritePixels(renderTextureRight, textureRight);
-            Color[] colorsL = textureLeft.GetPixels();
-            Color[] colorsR = textureRight.GetPixels();
-            byte[] bytesL = textureLeft.EncodeToJPG();
-            byte[] bytesR = textureRight.EncodeToJPG();
-            File.WriteAllBytes(Application.dataPath + "/../bytesL.jpg", bytesL);
-            File.WriteAllBytes(Application.dataPath + "/../bytesR.jpg", bytesR);
 
-            byte[] bytes = new byte[bytesL.Length + bytesR.Length];
+            //Color[] colorsL = textureLeft.GetPixels();
+            //Color[] colorsR = textureRight.GetPixels();
+
+            //byte[] bytesl = textureLeft.EncodeToPNG();
+            //byte[] bytesr = textureRight.EncodeToPNG();
+            //byte[] bytes = new byte[bytesL.Length + bytesR.Length];
             //System.Buffer.BlockCopy(bytesL, 0, bytes, 0, bytesL.Length);
             //System.Buffer.BlockCopy(bytesR, 0, bytes, bytesL.Length, bytesR.Length);
-            //socket.Send(bytes);
+
+            byte[] bytesLeft = textureLeft.GetRawTextureData();
+            byte[] bytesRight = textureRight.GetRawTextureData();
+            byte[] bytes = new byte[bytesLeft.Length + bytesRight.Length];
+            System.Buffer.BlockCopy(bytesLeft, 0, bytes, 0, bytesLeft.Length);
+            System.Buffer.BlockCopy(bytesRight, 0, bytes, bytesLeft.Length, bytesRight.Length);
+            bytesLeft = null;
+            bytesRight = null;
+
+            SendStatus ss = socket.Send(bytes, SendRecvOpt.NOBLOCK);
+            Debug.Log("Hello");
         }
 
         public Texture2D WritePixels(RenderTexture rt, Texture2D texture2D)
@@ -180,6 +205,20 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
         private void Update()
         {
+
+            if (Input.GetKeyDown(KeyCode.LeftBracket))
+            {
+            }
+
+            if (Input.GetKeyDown(KeyCode.RightBracket))
+            {
+            }
+
+            if (!kortexSettings.CanMove)
+            {
+                return;
+            } 
+
             RotateView();
 
             if (CrossPlatformInputManager.GetButtonDown("Jump") && !m_Jump)
@@ -199,7 +238,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
             if ((Mathf.Abs(input.x) > float.Epsilon || Mathf.Abs(input.y) > float.Epsilon) && (advancedSettings.airControl || m_IsGrounded))
             {
                 // always move along the camera forward as it is the direction that it being aimed at
-                Vector3 desiredMove = camL.transform.forward*input.y + camL.transform.right*input.x;
+                Vector3 desiredMove = kortexSettings.CameraTop.transform.forward*input.y + kortexSettings.CameraTop.transform.right*input.x;
                 desiredMove = Vector3.ProjectOnPlane(desiredMove, m_GroundContactNormal).normalized;
 
                 desiredMove.x = desiredMove.x*movementSettings.CurrentTargetSpeed;
@@ -284,8 +323,8 @@ namespace UnityStandardAssets.Characters.FirstPerson
             // get the rotation before it's changed
             float oldYRotation = transform.eulerAngles.y;
 
-            mouseLook.LookRotation (transform, camL.transform);
-            mouseLook.LookRotation(transform, camR.transform);
+            mouseLook.LookRotation (transform, kortexSettings.CameraLeft.transform);
+            mouseLook.LookRotation(transform, kortexSettings.CameraRight.transform);
 
 
             if (m_IsGrounded || advancedSettings.airControl)
